@@ -7,9 +7,23 @@ import (
 
 func TestLimit(t *testing.T) {
 	l := NewLimit(10_000)
-	order := NewOrder(1.0, true)
-	l.AddOrder(order)
+	buyOrder1 := NewOrder(1.0, true)
+	buyOrder2 := NewOrder(2.0, true)
+	buyOrder3 := NewOrder(3.0, true)
 
+	l.AddOrder(buyOrder1)
+	l.AddOrder(buyOrder2)
+	l.AddOrder(buyOrder3)
+
+	if l.TotalVolume != 6.0 {
+		t.Errorf("TotalVolume is not correct")
+	}
+
+	l.DeleteOrder(buyOrder2)
+
+	if l.TotalVolume != 4.0 {
+		t.Errorf("TotalVolume is not correct")
+	}
 	fmt.Println(l)
 
 }
