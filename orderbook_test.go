@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"reflect"
 	"testing"
 )
 
@@ -29,12 +30,49 @@ func TestLimit(t *testing.T) {
 }
 
 func TestOrderbook(t *testing.T) {
-	ob := &OrderBook{}
+	orderBook := NewOrderBook()
+	buyOrder1 := NewOrder(100, true)
+	buyOrder2 := NewOrder(200, true)
+	buyOrder3 := NewOrder(100, true)
+	orderBook.PlaceOrder(100, buyOrder1)
+	orderBook.PlaceOrder(200, buyOrder2)
+	orderBook.PlaceOrder(100, buyOrder3)
 
-	// Test that the OrderBook struct is initialized correctly
-	if ob == nil {
-		t.Errorf("OrderBook struct is nil")
+	for i := 0; i < len(orderBook.bids); i++ {
+		fmt.Println(orderBook.bids[i].String())
 	}
 
-	// Add more tests here as needed
+	if orderBook.bids[0].TotalVolume != 200 {
+		t.Errorf("TotalVolume is not correct")
+	}
+
+	if orderBook.bids[1].TotalVolume != 200 {
+		t.Errorf("TotalVolume is not correct")
+	}
+
+	if len(orderBook.bids[0].Orders) != 2 {
+		t.Errorf("Order count is not correct")
+	}
+}
+
+func TestOrderBook_PlaceOrder(t *testing.T) {
+	type args struct {
+		price float64
+		order *Order
+	}
+	tests := []struct {
+		name string
+		ob   *OrderBook
+		args args
+		want []Match
+	}{
+		// TODO: Add test cases.
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := tt.ob.PlaceOrder(tt.args.price, tt.args.order); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("OrderBook.PlaceOrder() = %v, want %v", got, tt.want)
+			}
+		})
+	}
 }
