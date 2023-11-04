@@ -76,3 +76,19 @@ func TestOrderBook_PlaceOrder(t *testing.T) {
 		})
 	}
 }
+
+func assert(t *testing.T, a, b any) {
+	if !reflect.DeepEqual(a, b) {
+		t.Errorf("Expected %v, got %v", a, b)
+	}
+
+}
+
+func TestOrderBook_PlaceLimitOrder(t *testing.T) {
+	ob := NewOrderBook()
+
+	sellOrder := NewOrder(10, false)
+	ob.PlaceLimitOrder(100_000, sellOrder)
+
+	assert(t, len(ob.asks), 1)
+}

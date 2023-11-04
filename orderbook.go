@@ -6,6 +6,9 @@ import (
 	"time"
 )
 
+//limit (限价单) 核心是一个价格，一个order列表，一个总量
+//order 里有总量size, 买卖方向bid, 时间戳timestamp，和一个指向limit的指针
+//orderbook 核心是两个limit列表，一个是买单，一个是卖单
 type Match struct {
 	Ask        *Order
 	Bid        *Order
@@ -40,6 +43,10 @@ func NewOrder(size float64, bid bool) *Order {
 		Bid:       bid,
 		Timestamp: time.Now().UnixNano(),
 	}
+}
+
+func (order *Order) IsFilled() bool {
+	return order.Size == 0.0
 }
 
 func (order *Order) String() string {
@@ -110,6 +117,69 @@ func (limit *Limit) DeleteOrder(o *Order) {
 	sort.Sort(limit.Orders)
 }
 
+func (limit *Limit) MatchOrders(dst *Order) []Match {
+	var (
+		matchs      []Match
+		ordersToDel []*Order
+	)
+
+	for _, order := range limit.Orders {
+		if dst.IsFilled() {
+			break
+		}
+
+		match := limit.matchOrder(dst, order)
+		matchs = append(matchs, match)
+
+		limit.TotalVolume -= match.SizeFilled
+
+		if order.IsFilled() {
+			ordersToDel = append(ordersToDel, order)
+		}
+	}
+
+	for _, order := range ordersToDel {
+		limit.DeleteOrder(order)
+	}
+
+	return matchs
+}
+
+/**
+前提: o1, o2 是不同方向的order
+*/
+func (limit *Limit) matchOrder(o1, o2 *Order) Match {
+	var (
+		ask        *Order
+		bid        *Order
+		sizeFilled float64
+	)
+	if o1.Bid {
+		bid = o1
+		ask = o2
+	} else {
+		bid = o2
+		ask = o1
+	}
+
+	if bid.Size > ask.Size {
+		sizeFilled = ask.Size
+		bid.Size -= ask.Size
+		ask.Size = 0
+	} else {
+		sizeFilled = bid.Size
+		ask.Size -= bid.Size
+		bid.Size = 0
+	}
+
+	return Match{
+		Ask:        ask,
+		Bid:        bid,
+		SizeFilled: sizeFilled,
+		Price:      limit.Price,
+	}
+}
+
 func (limit *Limit) String() string {
 	return fmt.Sprintf("Limit{Price: %f, TotalVolume: %f, OrdersCntL %d}", limit.Price, limit.TotalVolume, len(limit.Orders))
 }
@@ -129,6 +199,23 @@ func NewOrderBook() *OrderBook {
 		AskLimits: map[float64]*Limit{},
 		BidLimits: map[float64]*Limit{},
 	}
+}
+
+/**
+生成一个市价单
+*/
+func (ob *OrderBook) PlaceMarketOrder(order *Order) []Match {
+	//logic
+	return []Match{}
+}
+
+/**
+生成一个限价单
+*/
+func (ob *OrderBook) PlaceLimitOrder(price float64, order *Order) {
+	//logic
+	ob.add(price, order)
+
 }
 
 func (ob *OrderBook) PlaceOrder(price float64, order *Order) []Match {
@@ -167,4 +254,14 @@ func (ob *OrderBook) addAsk(price float64, order *Order) {
 
 func (ob *OrderBook) String() string {
 	return fmt.Sprintf("OrderBook{asks: %v, bids: %v}", ob.asks, ob.bids)
+}
+
+func (ob *OrderBook) Asks() []*Limit {
+	sort.Sort(ByBestAsk{ob.asks})
+	return ob.asks
+}
+
+func (ob *OrderBook) Bids() []*Limit {
+	sort.Sort(ByBestBid{ob.bids})
+	return ob.bids
 }
